@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>¿Qué puedo hacer hoy?</title>
+<style>
+  :root {
+    --naco: #D85A30;
+    --espana: #1D9E75;
+    --work: #378ADD;
+    --other: #8B5CF6;
+    --bg: #F5F5F7;
+    --card: #FFFFFF;
+    --border: #E5E5EA;
+    --text: #1C1C1E;
+    --text2: #48484A;
+    --muted: #8E8E93;
+    --open: #34C759;
+    --closed: #FF3B30;
+    --badge-plan-bg: #FFF3E0;
+    --badge-plan: #E65100;
+    --badge-24-bg: #E8F5E9;
+    --badge-24: #2E7D32;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: calc(80px + var(--safe-bottom));
+  }
+
+  /* HEADER */
+  .header {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 14px 16px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .date-pill {
+    background: var(--bg);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* DAY TABS */
+  .day-scroll {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .day-scroll::-webkit-scrollbar { display: none; }
+  .day-btn {
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    color: var(--text2);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .day-btn.today { border-color: var(--work); color: var(--work); }
+  .day-btn.active {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
+  }
+
+  /* MAIN */
+  main { padding: 14px 16px; }
+
+  /* SECTION */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 18px 0 8px;
+  }
+  .section-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .section-line { flex: 1; height: 0.5px; background: var(--border); }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 13px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-left: 4px solid transparent;
+    transition: opacity 0.2s;
+  }
+  .card.unavail { opacity: 0.35; }
+  .card.g-work  { border-left-color: var(--work); }
+  .card.g-naco  { border-left-color: var(--naco); }
+  .card.g-espana { border-left-color: var(--espana); }
+  .card.g-other { border-left-color: var(--other); }
+
+  .card-icon { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; }
+  .card-body { flex: 1; min-width: 0; }
+  .card-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    line-height: 1.3;
+  }
+  .card-hours { font-size: 13px; color: var(--text2); margin-top: 3px; }
+  .card-note  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .b24   { background: var(--badge-24-bg);   color: var(--badge-24); }
+  .bplan { background: var(--badge-plan-bg); color: var(--badge-plan); }
+  .bwork { background: #E3F2FD; color: #0D47A1; }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+  .status-text { font-size: 10px; font-weight: 600; }
+  .is-open  .status-dot  { background: var(--open); box-shadow: 0 0 0 3px rgba(52,199,89,0.2); }
+  .is-open  .status-text { color: var(--open); }
+  .is-closed .status-dot { background: var(--closed); }
+  .is-closed .status-text{ color: var(--closed); }
+
+  /* EMPTY */
+  .empty { text-align: center; color: var(--muted); font-size: 15px; padding: 32px 0; }
+
+  /* ADD BUTTON */
+  .add-wrap { margin-top: 10px; }
+  .add-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1.5px dashed var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--card);
+    border-radius: 22px 22px 0 0;
+    padding: 20px 20px calc(20px + var(--safe-bottom));
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    animation: slideUp 0.28s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 18px;
+  }
+  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .field { margin-bottom: 14px; }
+  .field label { font-size: 13px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .field textarea { height: 70px; resize: none; }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--work);
+  }
+
+  .day-checks { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dchk {
+    padding: 6px 13px;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--bg);
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+  .dchk.sel { background: var(--text); color: #fff; border-color: var(--text); }
+
+  .tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag {
+    padding: 8px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--bg);
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+  .tag.sel.t24   { background: var(--badge-24-bg);   color: var(--badge-24);   border-color: var(--badge-24); }
+  .tag.sel.tplan { background: var(--badge-plan-bg); color: var(--badge-plan); border-color: var(--badge-plan); }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn-cancel {
+    flex: 1; padding: 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg);
+    color: var(--text2);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-save {
+    flex: 2; padding: 14px;
+    border: none;
+    border-radius: 14px;
+    background: var(--text);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px;
+    border-top: 0.5px solid var(--border);
+    background: var(--bg);
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-weight: 500; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <h1>¿Qué hago hoy? 🎯</h1>
+    <div class="date-pill" id="datepill"></div>
+  </div>
+  <div class="day-scroll" id="tabs"></div>
+</div>
+
+<main id="main"></main>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Añadir lugar</h2>
+    <div class="field"><label>Nombre</label><input type="text" id="fn" placeholder="Ej: Cine, Parque, Gym…"></div>
+    <div class="field"><label>Grupo</label>
+      <select id="fg">
+        <option value="work">💼 Trabajo</option>
+        <option value="naco">🏊 Club Naco</option>
+        <option value="espana">🏠 Casa España</option>
+        <option value="other">✨ Otro</option>
+      </select>
+    </div>
+    <div class="field"><label>Icono (emoji)</label><input type="text" id="fi" placeholder="🎯" style="width:90px"></div>
+    <div class="field"><label>Horario</label><input type="text" id="fh" placeholder="Ej: 8am–10pm · 24h"></div>
+    <div class="field"><label>Días disponibles</label>
+      <div class="day-checks" id="fdaybox"></div>
+    </div>
+    <div class="field"><label>Marcas especiales</label>
+      <div class="tag-row">
+        <span class="tag t24" id="t24">⚡ 24 horas</span>
+        <span class="tag tplan" id="tplan">📋 Requiere planear</span>
+      </div>
+    </div>
+    <div class="field"><label>Nota</label><textarea id="fnote" placeholder="Ej: Reservar con anticipación"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="mcancel">Cancelar</button>
+      <button class="btn-save" id="msave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const FULL = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const now = new Date();
+const todayI = (now.getDay() + 6) % 7;
+const nm = now.getHours() * 60 + now.getMinutes();
+
+document.getElementById('datepill').textContent =
+  now.toLocaleDateString('es-DO', { weekday: 'short', day: 'numeric', month: 'short' });
+
+function h(s) {
+  const m = s.match(/(\d+)(?::(\d+))?\s*(am|pm)/i);
+  if (!m) return -1;
+  let hr = +m[1], mn = +(m[2] || 0);
+  const ap = m[3].toLowerCase();
+  if (ap === 'pm' && hr !== 12) hr += 12;
+  if (ap === 'am' && hr === 12) hr = 0;
+  return hr * 60 + mn;
+}
+function isOpen(r, t) {
+  for (let i = 0; i < r.length - 1; i += 2) {
+    const s = r[i], e = r[i+1];
+    if (e < s) { if (t >= s || t <= e) return true; }
+    else        { if (t >= s && t <= e) return true; }
+  }
+  return false;
+}
+
+let items = [
+  { id:1,  name:'Proyecto CC',                group:'work',   icon:'💼', badges:['work'], note:'',
+    sched:{0:{t:'8am–12pm · 1–5pm',r:[h('8am'),h('12pm'),h('1pm'),h('5pm')]},1:{t:'8am–12pm · 1–5pm',r:[h('8am'),h('12pm'),h('1pm'),h('5pm')]},2:{t:'8am–12pm · 1–5pm',r:[h('8am'),h('12pm'),h('1pm'),h('5pm')]},3:{t:'8am–12pm · 1–5pm',r:[h('8am'),h('12pm'),h('1pm'),h('5pm')]},4:{t:'8am–12pm · 1–5pm',r:[h('8am'),h('12pm'),h('1pm'),h('5pm')]},5:{t:'8am–12pm',r:[h('8am'),h('12pm')]}} },
+
+  { id:2,  name:'Club Casa España',            group:'espana', icon:'🏠', badges:[], note:'Entrada general',
+    sched:{0:{t:'5am–10pm',r:[h('5am'),h('10pm')]},1:{t:'5am–12pm',r:[h('5am'),h('12pm')]},2:{t:'5am–12pm',r:[h('5am'),h('12pm')]},3:{t:'5am–12pm',r:[h('5am'),h('12pm')]},4:{t:'5am–2am',r:[h('5am'),1439]},5:{t:'6am–2am',r:[h('6am'),1439]},6:{t:'7am–10pm',r:[h('7am'),h('10pm')]}} },
+
+  { id:10, name:'Naco · Cafetería',            group:'naco',   icon:'☕', badges:[], note:'',
+    sched:{0:{t:'7am–11pm',r:[h('7am'),h('11pm')]},1:{t:'7am–11pm',r:[h('7am'),h('11pm')]},2:{t:'7am–11pm',r:[h('7am'),h('11pm')]},3:{t:'7am–11pm',r:[h('7am'),h('11pm')]},4:{t:'7am–11pm',r:[h('7am'),h('11pm')]},5:{t:'7am–11pm',r:[h('7am'),h('11pm')]},6:{t:'7am–7pm',r:[h('7am'),h('7pm')]}} },
+
+  { id:11, name:'Naco · Sports Bar',           group:'naco',   icon:'🍺', badges:[], note:'',
+    sched:{1:{t:'5pm–11pm',r:[h('5pm'),h('11pm')]},2:{t:'5pm–11pm',r:[h('5pm'),h('11pm')]},3:{t:'5pm–11pm',r:[h('5pm'),h('11pm')]},4:{t:'4pm–1am',r:[h('4pm'),1439]},5:{t:'4pm–1am',r:[h('4pm'),1439]},6:{t:'11am–10pm',r:[h('11am'),h('10pm')]}} },
+
+  { id:12, name:'Naco · Trattoria / TacoNaco', group:'naco',   icon:'🍕', badges:[], note:'Martes cerrado',
+    sched:{0:{t:'12pm–10pm',r:[h('12pm'),h('10pm')]},2:{t:'12pm–10pm',r:[h('12pm'),h('10pm')]},3:{t:'12pm–10pm',r:[h('12pm'),h('10pm')]},4:{t:'12pm–11pm',r:[h('12pm'),h('11pm')]},5:{t:'11am–11pm',r:[h('11am'),h('11pm')]},6:{t:'11am–9pm',r:[h('11am'),h('9pm')]}} },
+
+  { id:13, name:'Naco · Piscina recreativa',   group:'naco',   icon:'🏊', badges:[], note:'Verano hasta 7pm',
+    sched:{0:{t:'7am–6pm',r:[h('7am'),h('6pm')]},1:{t:'7am–6pm',r:[h('7am'),h('6pm')]},2:{t:'7am–6pm',r:[h('7am'),h('6pm')]},3:{t:'7am–6pm',r:[h('7am'),h('6pm')]},4:{t:'7am–6pm',r:[h('7am'),h('6pm')]},5:{t:'7am–6pm',r:[h('7am'),h('6pm')]},6:{t:'7am–6pm',r:[h('7am'),h('6pm')]}} },
+
+  { id:14, name:'Naco · BBQ',                  group:'naco',   icon:'🔥', badges:[], note:'Verano hasta 7pm',
+    sched:{0:{t:'7am–6pm',r:[h('7am'),h('6pm')]},1:{t:'7am–6pm',r:[h('7am'),h('6pm')]},2:{t:'7am–6pm',r:[h('7am'),h('6pm')]},3:{t:'7am–6pm',r:[h('7am'),h('6pm')]},4:{t:'7am–6pm',r:[h('7am'),h('6pm')]},5:{t:'7am–6pm',r:[h('7am'),h('6pm')]},6:{t:'7am–6pm',r:[h('7am'),h('6pm')]}} },
+
+  { id:15, name:'Naco · Spa',                  group:'naco',   icon:'🧖', badges:['plan'], note:'Masaje, sauna y jacuzzi',
+    sched:{0:{t:'9am–8pm',r:[h('9am'),h('8pm')]},1:{t:'9am–8pm',r:[h('9am'),h('8pm')]},2:{t:'9am–8pm',r:[h('9am'),h('8pm')]},3:{t:'9am–8pm',r:[h('9am'),h('8pm')]},4:{t:'9am–8pm',r:[h('9am'),h('8pm')]},5:{t:'9am–12pm',r:[h('9am'),h('12pm')]}} },
+
+  { id:16, name:'Naco · Canchas pádel',        group:'naco',   icon:'🎾', badges:['plan'], note:'',
+    sched:{0:{t:'6am–10pm',r:[h('6am'),h('10pm')]},1:{t:'6am–10pm',r:[h('6am'),h('10pm')]},2:{t:'6am–10pm',r:[h('6am'),h('10pm')]},3:{t:'6am–10pm',r:[h('6am'),h('10pm')]},4:{t:'6am–10pm',r:[h('6am'),h('10pm')]},5:{t:'6am–10pm',r:[h('6am'),h('10pm')]},6:{t:'6am–10pm',r:[h('6am'),h('10pm')]}} },
+
+  { id:17, name:'Naco · Gimnasio',             group:'naco',   icon:'🏋️', badges:[], note:'',
+    sched:{0:{t:'5:30am–10pm',r:[h('5:30am'),h('10pm')]},1:{t:'5:30am–10pm',r:[h('5:30am'),h('10pm')]},2:{t:'5:30am–10pm',r:[h('5:30am'),h('10pm')]},3:{t:'5:30am–10pm',r:[h('5:30am'),h('10pm')]},4:{t:'5:30am–10pm',r:[h('5:30am'),h('10pm')]},5:{t:'8am–5pm',r:[h('8am'),h('5pm')]},6:{t:'8am–2pm',r:[h('8am'),h('2pm')]}} },
+
+  { id:18, name:'Naco · Discoclub',            group:'naco',   icon:'🎵', badges:[], note:'Solo vie y sáb',
+    sched:{4:{t:'8pm–2am',r:[h('8pm'),1439]},5:{t:'8pm–2am',r:[h('8pm'),1439]}} },
+
+  { id:20, name:'España · Pizzería',           group:'espana', icon:'🍕', badges:[], note:'Martes cerrado',
+    sched:{0:{t:'12pm–10pm',r:[h('12pm'),h('10pm')]},2:{t:'12pm–12am',r:[h('12pm'),1439]},3:{t:'12pm–12am',r:[h('12pm'),1439]},4:{t:'12pm–12am',r:[h('12pm'),1439]},5:{t:'12pm–12am',r:[h('12pm'),1439]},6:{t:'12pm–10pm',r:[h('12pm'),h('10pm')]}} },
+
+  { id:21, name:'España · Gimnasio',           group:'espana', icon:'🏋️', badges:[], note:'',
+    sched:{0:{t:'5am–10pm',r:[h('5am'),h('10pm')]},1:{t:'5am–10pm',r:[h('5am'),h('10pm')]},2:{t:'5am–10pm',r:[h('5am'),h('10pm')]},3:{t:'5am–10pm',r:[h('5am'),h('10pm')]},4:{t:'5am–10pm',r:[h('5am'),h('10pm')]},5:{t:'6am–6pm',r:[h('6am'),h('6pm')]},6:{t:'9am–1pm',r:[h('9am'),h('1pm')]}} },
+
+  { id:22, name:'España · Salón de juegos',   group:'espana', icon:'🎮', badges:[], note:'Lun y mar cerrado',
+    sched:{2:{t:'3pm–12am',r:[h('3pm'),1439]},3:{t:'3pm–12am',r:[h('3pm'),1439]},4:{t:'3pm–12am',r:[h('3pm'),1439]},5:{t:'9am–12am',r:[h('9am'),1439]},6:{t:'9am–10pm',r:[h('9am'),h('10pm')]}} },
+
+  { id:23, name:'España · Camino de la salud',group:'espana', icon:'🚶', badges:[], note:'',
+    sched:{0:{t:'5am–10pm',r:[h('5am'),h('10pm')]},1:{t:'5am–12am',r:[h('5am'),1439]},2:{t:'5am–12am',r:[h('5am'),1439]},3:{t:'5am–12am',r:[h('5am'),1439]},4:{t:'5am–12am',r:[h('5am'),1439]},5:{t:'6am–12am',r:[h('6am'),1439]},6:{t:'7am–10pm',r:[h('7am'),h('10pm')]}} },
+
+  { id:24, name:'España · Cafetería gym',     group:'espana', icon:'🥤', badges:[], note:'',
+    sched:{0:{t:'6:45am–10pm',r:[h('6:45am'),h('10pm')]},1:{t:'6:45am–10pm',r:[h('6:45am'),h('10pm')]},2:{t:'6:45am–10pm',r:[h('6:45am'),h('10pm')]},3:{t:'6:45am–10pm',r:[h('6:45am'),h('10pm')]},4:{t:'6:45am–10pm',r:[h('6:45am'),h('10pm')]},5:{t:'6:45am–10pm',r:[h('6:45am'),h('10pm')]},6:{t:'6:45am–10pm',r:[h('6:45am'),h('10pm')]}} },
+
+  { id:25, name:'España · La Taberna',        group:'espana', icon:'🍽️', badges:[], note:'Mar–dom',
+    sched:{1:{t:'11am en adelante',r:[h('11am'),1439]},2:{t:'11am en adelante',r:[h('11am'),1439]},3:{t:'11am en adelante',r:[h('11am'),1439]},4:{t:'11am en adelante',r:[h('11am'),1439]},5:{t:'11am en adelante',r:[h('11am'),1439]},6:{t:'11am en adelante',r:[h('11am'),1439]}} },
+
+  { id:26, name:'España · Bulerías bar',      group:'espana', icon:'🎸', badges:[], note:'Lun cerrado',
+    sched:{1:{t:'8am–12pm',r:[h('8am'),h('12pm')]},2:{t:'8am–12pm',r:[h('8am'),h('12pm')]},3:{t:'8am–12pm',r:[h('8am'),h('12pm')]},4:{t:'8am–2am',r:[h('8am'),1439]},5:{t:'8am–2am',r:[h('8am'),1439]},6:{t:'8am–10pm',r:[h('8am'),h('10pm')]}} },
+
+  { id:27, name:'España · Nado libre',        group:'espana', icon:'🏊', badges:[], note:'Solo sábados',
+    sched:{5:{t:'6am–6pm',r:[h('6am'),h('6pm')]}} },
+
+  { id:28, name:'España · Nado recreativo',   group:'espana', icon:'🌊', badges:[], note:'',
+    sched:{0:{t:'10am–7pm',r:[h('10am'),h('7pm')]},1:{t:'10am–7pm',r:[h('10am'),h('7pm')]},2:{t:'10am–7pm',r:[h('10am'),h('7pm')]},3:{t:'10am–7pm',r:[h('10am'),h('7pm')]},4:{t:'10am–7pm',r:[h('10am'),h('7pm')]},5:{t:'10am–7pm',r:[h('10am'),h('7pm')]},6:{t:'10am–7pm',r:[h('10am'),h('7pm')]}} },
+];
+
+let nextId = 100;
+let selDay = todayI;
+
+function avail(item) { return !!(item.sched && item.sched[selDay]); }
+function openStatus(item) {
+  const s = item.sched && item.sched[selDay];
+  if (!s || !s.r || !s.r.length) return null;
+  return isOpen(s.r, nm);
+}
+
+const GROUPS = [
+  { key:'work',   label:'Trabajo',      color:'#378ADD' },
+  { key:'naco',   label:'Club Naco',    color:'#D85A30' },
+  { key:'espana', label:'Casa España',  color:'#1D9E75' },
+  { key:'other',  label:'Otros',        color:'#8B5CF6' },
+];
+
+function renderTabs() {
+  const el = document.getElementById('tabs');
+  el.innerHTML = DAYS.map((d, i) => {
+    let cls = 'day-btn';
+    if (i === todayI) cls += ' today';
+    if (i === selDay) cls += ' active';
+    return `<button class="${cls}" data-i="${i}">${d}</button>`;
+  }).join('');
+  el.querySelectorAll('.day-btn').forEach(b => b.onclick = () => {
+    selDay = +b.dataset.i;
+    renderTabs();
+    renderMain();
+  });
+  // scroll selected into view
+  const active = el.querySelector('.active');
+  if (active) active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
+
+function cardHTML(item, ua) {
+  const s = item.sched && item.sched[selDay];
+  const hours = s ? s.t : 'No disponible hoy';
+  const op = ua ? openStatus(item) : null;
+  const statusHTML = op === true
+    ? `<div class="status-wrap is-open"><div class="status-dot"></div><div class="status-text">Abierto</div></div>`
+    : op === false
+    ? `<div class="status-wrap is-closed"><div class="status-dot"></div><div class="status-text">Cerrado</div></div>`
+    : '';
+  const b24 = item.badges.includes('24h') ? '<span class="badge b24">⚡ 24h</span>' : '';
+  const bp  = item.badges.includes('plan') ? '<span class="badge bplan">📋</span>' : '';
+  const bw  = item.badges.includes('work') ? '<span class="badge bwork">Trabajo</span>' : '';
+  const noteHTML = item.note ? `<div class="card-note">${item.note}</div>` : '';
+  return `<div class="card g-${item.group}${ua ? '' : ' unavail'}">
+    <div class="card-icon">${item.icon || '📍'}</div>
+    <div class="card-body">
+      <div class="card-name">${item.name} ${b24}${bp}${bw}</div>
+      <div class="card-hours">${hours}</div>${noteHTML}
+    </div>${statusHTML}
+  </div>`;
+}
+
+function renderMain() {
+  const main = document.getElementById('main');
+  let html = '';
+  let anyGroup = false;
+  GROUPS.forEach(g => {
+    const ga = items.filter(x => x.group === g.key && avail(x));
+    const gu = items.filter(x => x.group === g.key && !avail(x));
+    if (!ga.length && !gu.length) return;
+    anyGroup = true;
+    html += `<div class="section-header">
+      <div class="section-dot" style="background:${g.color}"></div>
+      <div class="section-title">${g.label}</div>
+      <div class="section-line"></div>
+    </div>`;
+    ga.forEach(x => html += cardHTML(x, true));
+    gu.forEach(x => html += cardHTML(x, false));
+  });
+  if (!anyGroup) html = '<div class="empty">No hay nada aún.<br>¡Añade algo abajo! 👇</div>';
+  html += `<div class="add-wrap"><button class="add-btn" id="addbtn">＋ Añadir lugar o actividad</button></div>`;
+  main.innerHTML = html;
+  document.getElementById('addbtn').onclick = openModal;
+}
+
+function openModal() {
+  const el = document.getElementById('fdaybox');
+  el.innerHTML = ['L','M','X','J','V','S','D'].map((d, i) =>
+    `<span class="dchk sel" data-i="${i}">${d}</span>`).join('');
+  el.querySelectorAll('.dchk').forEach(b => b.onclick = () => b.classList.toggle('sel'));
+  ['fn','fi','fh','fnote'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('t24').classList.remove('sel');
+  document.getElementById('tplan').classList.remove('sel');
+  document.getElementById('modal').classList.add('open');
+}
+
+document.getElementById('t24').onclick = function() { this.classList.toggle('sel'); };
+document.getElementById('tplan').onclick = function() { this.classList.toggle('sel'); };
+document.getElementById('mcancel').onclick = () => document.getElementById('modal').classList.remove('open');
+document.getElementById('modal').onclick = function(e) {
+  if (e.target === this) this.classList.remove('open');
+};
+
+const ICONS = { work:'💼', naco:'🏊', espana:'🏠', other:'📍' };
+document.getElementById('msave').onclick = () => {
+  const name = document.getElementById('fn').value.trim();
+  if (!name) return;
+  const group = document.getElementById('fg').value;
+  const icon  = document.getElementById('fi').value.trim() || ICONS[group];
+  const ht    = document.getElementById('fh').value.trim() || 'Disponible';
+  const note  = document.getElementById('fnote').value.trim();
+  const days  = [...document.querySelectorAll('#fdaybox .dchk.sel')].map(b => +b.dataset.i);
+  const badges = [];
+  if (document.getElementById('t24').classList.contains('sel'))   badges.push('24h');
+  if (document.getElementById('tplan').classList.contains('sel')) badges.push('plan');
+  const sched = {};
+  days.forEach(d => { sched[d] = { t: ht, r: [] }; });
+  items.push({ id: nextId++, name, group, icon, badges, note, sched });
+  document.getElementById('modal').classList.remove('open');
+  renderMain();
+};
+
+renderTabs();
+renderMain();
+</script>
+</body>
+</html>
